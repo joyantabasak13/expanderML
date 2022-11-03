@@ -217,15 +217,15 @@ def generate_margulis_gabber_galil_graph(n):
             conn_7_y = (y+x+1) % n
             conn_8_y = (y-x+1) % n
 
-            print(f"Vertex: {x*n+y} is connected to: ")
-            print(f"{conn_1_x * n + conn_1234_y}")
-            print(f"{conn_2_x * n + conn_1234_y}")
-            print(f"{conn_3_x * n + conn_1234_y}")
-            print(f"{conn_4_x * n + conn_1234_y}")
-            print(f"{conn_5678_x * n + conn_5_y}")
-            print(f"{conn_5678_x * n + conn_6_y}")
-            print(f"{conn_5678_x * n + conn_7_y}")
-            print(f"{conn_5678_x * n + conn_8_y}")
+            # print(f"Vertex: {x*n+y} is connected to: ")
+            # print(f"{conn_1_x * n + conn_1234_y}")
+            # print(f"{conn_2_x * n + conn_1234_y}")
+            # print(f"{conn_3_x * n + conn_1234_y}")
+            # print(f"{conn_4_x * n + conn_1234_y}")
+            # print(f"{conn_5678_x * n + conn_5_y}")
+            # print(f"{conn_5678_x * n + conn_6_y}")
+            # print(f"{conn_5678_x * n + conn_7_y}")
+            # print(f"{conn_5678_x * n + conn_8_y}")
 
             mat[x*n+y][conn_1_x*n+conn_1234_y] += 1
             mat[conn_1_x*n+conn_1234_y][x*n+y] += 1

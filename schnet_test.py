@@ -6,6 +6,9 @@ import schnetpack.train as trn
 import torch
 import numpy as np
 import datetime
+from torch.utils.data.sampler import RandomSampler
+import math
+
 ct = datetime.datetime.now()
 print("current time:-", ct)
 
@@ -17,25 +20,26 @@ omdata = OMDB('/Users/joyanta/Documents/Research/Materials/OMDB_dataset/OMDB-GAP
 
 train, val, test = spk.train_test_split(
     data=omdata,
-    num_train=5000,
+    num_train=9000,
     num_val=1000,
     split_file=os.path.join(omdbase, "split.npz"),
 )
 
-batchsize = 64
-n_epochs = 5
-lr_rate = 1e-4
+batchsize = 32
+n_epochs = 50
+lr_rate = 1e-3
 
-train_loader = spk.AtomsLoader(train, batch_size=batchsize, shuffle=True)
-val_loader = spk.AtomsLoader(val, batch_size=batchsize)
+train_loader = spk.AtomsLoader(train, batch_size=batchsize, sampler=RandomSampler(train), pin_memory=True)
+val_loader = spk.AtomsLoader(val, batch_size=batchsize, pin_memory=True)
 
 schnet = spk.representation.SchNet(
     n_atom_basis=64,
     n_filters=64,
     n_gaussians=25,
     n_interactions=3,
-    cutoff=4.,
-    cutoff_network=spk.nn.cutoff.CosineCutoff
+    cutoff=5.,
+    cutoff_network=spk.nn.cutoff.CosineCutoff,
+    normalize_filter=True
 )
 
 # atomrefs = omdata.train_dataset.atomrefs
@@ -58,11 +62,10 @@ hooks = [
     trn.CSVHook(log_path=omdbase, metrics=metrics),
     trn.ReduceLROnPlateauHook(
         optimizer,
-        patience=5, factor=0.8, min_lr=1e-6,
+        patience=10, factor=0.6, min_lr=1e-4,window_length=1,
         stop_after_min=True
     )
 ]
-
 
 
 trainer = trn.Trainer(
@@ -91,13 +94,12 @@ print("current time:-", ct)
 
 best_model = torch.load(os.path.join(omdbase, 'best_model'))
 
-test_loader = spk.AtomsLoader(test, batch_size=100)
+test_loader = spk.AtomsLoader(test, batch_size=32)
 
 err = 0
+err_mse = 0
 print(len(test_loader))
 for count, batch in enumerate(test_loader):
-    ct = datetime.datetime.now()
-    print("current time:-", ct)
     # move batch to GPU, if necessary
     batch = {k: v.to(device) for k, v in batch.items()}
 
@@ -109,11 +111,19 @@ for count, batch in enumerate(test_loader):
     tmp = tmp.detach().cpu().numpy()  # detach from graph & convert to numpy
     err += tmp
 
+    tmp = torch.sum(pow(torch.abs(pred[OMDB.BandGap] - batch[OMDB.BandGap]), 2))
+    tmp = tmp.detach().cpu().numpy()  # detach from graph & convert to numpy
+    err_mse += tmp
+
     # log progress
     percent = '{:3.2f}'.format(count / len(test_loader) * 100)
-    print('Progress:', percent + '%' + ' ' * (5 - len(percent)), end="\r")
-    ct = datetime.datetime.now()
-    print("current time:-", ct)
+    print('Progress:', percent + '%' + ' ' * (5 - len(percent)))
 
+print("TestLoader Finished")
+ct = datetime.datetime.now()
+print("current time:-", ct)
 err /= len(test)
-print('Test MAE', np.round(err, 2))
+err_mse /= len(test)
+print('Test MAE ', np.round(err, 2))
+print('Test MSE ', np.round(err_mse, 2))
+print('Test RMSE ', math.sqrt(np.round(err_mse, 2)))
